@@ -5,14 +5,19 @@
 #include<dns_sd.h>
 #include<inttypes.h>
 #include<string.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
 
-#define DNSServiceFlags 0
-#define InterfaceIndex 0
-#define ServiceName "_hap._tcp"
-#define ServiceType ""
-#define port 0
 #define deviceIdentity "00:11:22:33:44:55"
 #define deviceName "Light"
+
+unsigned short getSocketPortNumberV4(int _socket) {
+struct sockaddr_in addr; 
+socklen_t len = sizeof(addr);
+getsockname(_socket, (struct sockaddr *)&addr, &len);
+return ntohs(addr.sin_port);
+}
+
 int main()
 {
 	TXTRecordRef txtRecord;
@@ -25,30 +30,44 @@ int main()
 	uint32_t stn = 1;
 	char stn_buff[11];
 
-	int numbytes1,numbytes2;
+	int numbytes1,numbytes2,ret;
 
 	TXTRecordCreate(&txtRecord, 0, NULL);
 
 	numbytes1 = sprintf(ccn_buff, "%"PRIu32"", ccn);
-	TXTRecordSetValue(&txtRecord, "c#", numbytes1, ccn_buff);    //Current Config number
-	TXTRecordSetValue(&txtRecord, "ff", 4, "0x01");    //feature flag, 0x01 Supports MFi-pair
-	TXTRecordSetValue(&txtRecord, "id", 17, deviceIdentity);    //Device id
-	TXTRecordSetValue(&txtRecord, "md", strlen(deviceName), deviceName);    //Model Name		
-//	TXTRecordSetValue(&txtRecord, "pv", 3, "1.0");  //Version, required if not 1.0
+	ret = TXTRecordSetValue(&txtRecord, "c#", numbytes1, ccn_buff);    //Current Config number
+	if(ret != kDNSServiceErr_NoError) {	printf("error in TXTRecordSetValue: %d\n",ret); }
+
+	ret = TXTRecordSetValue(&txtRecord, "ff", 4, "0x00");    //feature flag, 0x01 Supports MFi-pair
+	if(ret != kDNSServiceErr_NoError) {  printf("error in TXTRecordSetValue: %d\n",ret); }
+
+	ret = TXTRecordSetValue(&txtRecord, "id", 17, deviceIdentity);    //Device id
+	if(ret != kDNSServiceErr_NoError) {  printf("error in TXTRecordSetValue: %d\n",ret); }
+	
+	ret = TXTRecordSetValue(&txtRecord, "md", strlen(deviceName), deviceName);    //Model Name		
+	if(ret != kDNSServiceErr_NoError) {  printf("error in TXTRecordSetValue: %d\n",ret); }
+
+//	ret = TXTRecordSetValue(&txtRecord, "pv", 3, "1.0");  //Version, required if not 1.0
+//	if(ret != kDNSServiceErr_NoError) {  printf("error in TXTRecordSetValue: %d\n",ret); }
+	
 	numbytes2 = sprintf(stn_buff, "%"PRIu32"", stn);
-    	TXTRecordSetValue(&txtRecord, "s#", numbytes2, stn_buff);    //Current Status number
-//    	TXTRecordSetValue(&txtRecord, "sf", 1, "1");    //Status Flags, required if non zero
+    	ret = TXTRecordSetValue(&txtRecord, "s#", numbytes2, stn_buff);    //Current Status number
+	if(ret != kDNSServiceErr_NoError) {  printf("error in TXTRecordSetValue: %d\n",ret); }
+
+//    	ret = TXTRecordSetValue(&txtRecord, "sf", 1, "1");    //Status Flags, required if non zero
+//	if(ret != kDNSServiceErr_NoError) {  printf("error in TXTRecordSetValue: %d\n",ret); }
 
 
 
 
-	err = DNSServiceRegister(&sdref,DNSServiceFlags,InterfaceIndex,ServiceName,ServiceType,NULL,NULL,port,TXTRecordGetLength(&txtRecord),TXTRecordGetBytesPtr(&txtRecord),NULL,NULL);
+	err = DNSServiceRegister(&sdref,0,0,deviceName,"_hap._tcp",NULL,NULL,htons(0),TXTRecordGetLength(&txtRecord),TXTRecordGetBytesPtr(&txtRecord),NULL,NULL);
 	if(err != kDNSServiceErr_NoError) {
-		printf("error registering service\n");
+		printf("error registering service %d\n",err);
 		return -1;
 	}	
 	TXTRecordDeallocate(&txtRecord);
-	
+
+	while(1);	
 
 
 
