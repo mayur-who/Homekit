@@ -1,7 +1,7 @@
 Homekit
 =======
 
-Dear Apple,
+	Dear Apple,
 
 	If you want me to remove my repo then you can just mail me: mayurcools@gmail.com. No need to lawyer up and DMCA.
 
